@@ -6,7 +6,7 @@
 
 #include "kmer_total_count.h"
 
-const unsigned char alpha[256] =
+static const unsigned char alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 
@@ -24,15 +24,15 @@ const unsigned char alpha[256] =
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
 
-const char reverse_alpha[4] = { 'A', 'C', 'G', 'T' };
+static const char reverse_alpha[4] = { 'A', 'C', 'G', 'T' };
 
-inline unsigned long long pow_four(unsigned long long x) {
+unsigned long long pow_four(unsigned long long x) {
   return (unsigned long long)1 << (x * 2);
 }
 
 // convert a string of k-mer size base-4 values  into a
 // base-10 index
-inline unsigned long num_to_index(const char *str, const int kmer, const long error_pos) {
+unsigned long num_to_index(const char *str, const int kmer, const long error_pos) {
   int i = 0;
   unsigned long out = 0;
   unsigned long multiply = 1;
@@ -113,7 +113,7 @@ char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
   return dest;
 }
 
-unsigned long long * get_kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
+unsigned long long *get_kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
