@@ -126,7 +126,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   const unsigned long width = kmer_pow_four(kmer);
 
   // malloc our return array
-  unsigned long long * counts = calloc((width+ 1), sizeof(unsigned long long));
+  unsigned long long *counts = calloc(width + 1, sizeof *counts);
   if(counts == NULL)  {
     fprintf(stderr, strerror(errno));
     exit(EXIT_FAILURE);
