@@ -157,8 +157,8 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     if(start_len + 1 > str_size + 1) {
       str = realloc(str, start_len + 1);
       if(str == NULL) {
-        exit(EXIT_FAILURE);
         fprintf(stderr, strerror(errno));
+        exit(EXIT_FAILURE);
       }
     }
 
