@@ -40,9 +40,6 @@ unsigned long kmer_num_to_index(const char *str, const int kmer, const long erro
   for(i = kmer - 1; i >= 0; i--){
 
     if(str[i] >> 2) {
-#ifndef SHARED
-      position += i;
-#endif
       return error_pos;
     }
 
