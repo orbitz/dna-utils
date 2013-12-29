@@ -6,7 +6,7 @@
 
 #include "kmer_total_count.h"
 
-static const unsigned char alpha[256] =
+const unsigned char alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 
@@ -118,8 +118,8 @@ unsigned long long *get_kmer_counts_from_file(FILE *fh, const unsigned int kmer)
   size_t len = 0;
   ssize_t read;
 
-  long long i = 0;
-  long long position = 0;
+  size_t i = 0;
+  size_t position = 0;
 
   // width is 4^kmer
   // there's a sneaky bitshift to avoid pow dependency

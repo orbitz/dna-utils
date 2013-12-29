@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	unsigned long kmer = atoi(argv[2]);
+	long kmer = atoi(argv[2]);
 	if(kmer == 0) { 
 		fprintf(stderr, "Error: invalid kmer.\n");
 		exit(EXIT_FAILURE);
