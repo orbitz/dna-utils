@@ -80,9 +80,9 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  width = pow_four(kmer);
+  width = kmer_pow_four(kmer);
 
-  unsigned long long *counts = get_kmer_counts_from_file(fh, kmer);
+  unsigned long long *counts = kmer_counts_from_file(fh, kmer);
 
   // If nonzero is set, only print non zeros
   if(nonzero) {
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     if(label) {
       for(i = 0; i < width; i++)
         if(counts[i] != 0) {
-          char *kmer_str = index_to_kmer(i, kmer);
+          char *kmer_str = kmer_index_to_kmer(i, kmer);
           fprintf(stdout, "%s\t%llu\n", kmer_str, counts[i]);
           free(kmer_str);
         }
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     if(label) {
       for(i = 0; i < width; i++) {
         if(counts[i] != 0) {
-          char *kmer_str = index_to_kmer(i, kmer);
+          char *kmer_str = kmer_index_to_kmer(i, kmer);
           fprintf(stdout, "%s\t%llu\n", kmer_str, counts[i]);
           free(kmer_str);
         }

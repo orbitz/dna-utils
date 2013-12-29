@@ -46,11 +46,11 @@ int main(int argc, char **argv) {
 			memset(counts, 0, width * sizeof(unsigned long long));
 
 			for(i = 0; i < read - kmer; i++) {
-				line[i] = alpha[(int)line[i]];
+				line[i] = kmer_alpha[(int)line[i]];
 			}
 
 			for(i = 0; i < read - kmer; i++) {
-				counts[num_to_index(&line[i],kmer, width)]++;
+				counts[kmer_num_to_index(&line[i],kmer, width)]++;
 			}
 
 			for(i = 0; i < width; i++)

@@ -6,7 +6,7 @@
 
 #include "kmer_total_count.h"
 
-const unsigned char alpha[256] =
+const unsigned char kmer_alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 
@@ -26,13 +26,13 @@ const unsigned char alpha[256] =
 
 static const char reverse_alpha[4] = { 'A', 'C', 'G', 'T' };
 
-unsigned long long pow_four(unsigned long long x) {
+unsigned long long kmer_pow_four(unsigned long long x) {
   return (unsigned long long)1 << (x * 2);
 }
 
 // convert a string of k-mer size base-4 values  into a
 // base-10 index
-unsigned long num_to_index(const char *str, const int kmer, const long error_pos) {
+unsigned long kmer_num_to_index(const char *str, const int kmer, const long error_pos) {
   int i = 0;
   unsigned long out = 0;
   unsigned long multiply = 1;
@@ -54,7 +54,7 @@ unsigned long num_to_index(const char *str, const int kmer, const long error_pos
 }
 
 // convert an index back into a kmer string
-char *index_to_kmer(unsigned long long index, long kmer)  {
+char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
   int i = 0;
   int j = 0;
   char *num_array = calloc(kmer,  sizeof(char));
@@ -97,7 +97,7 @@ char *index_to_kmer(unsigned long long index, long kmer)  {
 
 // Strip out any character 'c' from char array 's' into a destination dest (you
 // need to allocate that) and copy only len characters.
-char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
+static char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
   unsigned long long i = 0;
   unsigned long long j = 0;
 
@@ -113,7 +113,7 @@ char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
   return dest;
 }
 
-unsigned long long *get_kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
+unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
@@ -123,7 +123,7 @@ unsigned long long *get_kmer_counts_from_file(FILE *fh, const unsigned int kmer)
 
   // width is 4^kmer
   // there's a sneaky bitshift to avoid pow dependency
-  const unsigned long width = pow_four(kmer);
+  const unsigned long width = kmer_pow_four(kmer);
 
   // malloc our return array
   unsigned long long * counts = calloc((width+ 1), sizeof(unsigned long long));
@@ -170,7 +170,7 @@ unsigned long long *get_kmer_counts_from_file(FILE *fh, const unsigned int kmer)
     // relace A, C, G and T with 0, 1, 2, 3 respectively
     // everything else is 5
     for(i = 0; i < seq_length; i++) {
-      str[i] = alpha[(int)str[i]];
+      str[i] = kmer_alpha[(int)str[i]];
     }
 
     // loop through our string to process each k-mer
