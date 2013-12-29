@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
 
 
 	char *filename = NULL;
+        FILE *fh;
 
 	unsigned int kmer = 0;
 
@@ -76,9 +77,15 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+        fh = fopen(filename, "r");
+        if(fh == NULL) {
+          fprintf(stderr, "Could not open %s\n", filename);
+          exit(EXIT_FAILURE);
+        }
+
 	width = pow_four(kmer);
 
-	unsigned long long *counts = get_kmer_counts_from_file(filename, kmer);
+	unsigned long long *counts = get_kmer_counts_from_file(fh, kmer);
 
 	// If nonzero is set, only print non zeros
 	if(nonzero) {

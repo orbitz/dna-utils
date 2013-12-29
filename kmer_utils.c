@@ -107,19 +107,13 @@ char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
   return dest;
 }
 
-unsigned long long * get_kmer_counts_from_file(const char *fn, const unsigned int kmer) {
+unsigned long long * get_kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
 
   long long i = 0;
   long long position = 0;
-
-  FILE * const fh = fopen(fn, "r");
-  if(fh == NULL) {
-    fprintf(stderr, "Error opening %s - %s\n", fn, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
 
   // width is 4^kmer
   // there's a sneaky bitshift to avoid pow dependency
