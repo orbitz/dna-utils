@@ -112,15 +112,37 @@ static char *strnstrip(const char *s, char *dest, int c, unsigned long long len)
   return dest;
 }
 
-void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
+static void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
   size_t i;
   for(i = 0; i < len; ++i) {
     str[i] = lookup[(int)str[i]];
   }
 }
 
-int is_error_char(char c) {
+static int is_error_char(char c) {
   return c == ERROR_CODE;
+}
+
+static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_t error_mer) {
+  size_t mer = 0;
+  size_t multiply = 1;
+  size_t i;
+
+  // for each char in the k-mer check if it is an error char
+  for(i = *pos; i < *pos + kmer_len; ++i) {
+    if(is_error_char(str[i])) {
+      mer = error_mer;
+      *pos = i;
+      return mer;
+    }
+
+    // multiply this char in the mer by the multiply
+    // and bitshift the multiply for the next round
+    mer += str[i] * multiply;
+    multiply = multiply << 2;
+  }
+
+  return mer;
 }
 
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
@@ -128,7 +150,6 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   size_t len = 0;
   ssize_t read;
 
-  size_t i = 0;
   size_t position = 0;
 
   // width is 4^kmer
@@ -181,25 +202,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
 
     // loop through our string to process each k-mer
     for(position = 0; position < (seq_length - kmer + 1); position++) {
-      unsigned long mer = 0;
-      unsigned long multiply = 1;
-
-      // for each char in the k-mer check if it is an error char
-      for(i = position; i < position + kmer; ++i) {
-        if(is_error_char(str[i])) {
-          mer = width;
-          position = i;
-          goto next;
-        }
-
-        // multiply this char in the mer by the multiply
-        // and bitshift the multiply for the next round
-        mer += str[i] * multiply;
-        multiply = multiply << 2;
-      }
-      // use this point to get mer of our loop
-    next:
-      // bump up the mer value in the counts array
+      size_t mer = calculate_mer(str, &position, kmer, width);
       counts[mer]++;
     }
   }
