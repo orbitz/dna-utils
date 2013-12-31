@@ -176,7 +176,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
       unsigned long multiply = 1;
 
       // for each char in the k-mer check if it is an error char
-      for(i = position + kmer - 1; i >= position; i--){
+      for(i = position; i < position + kmer; ++i) {
         if(str[i] == 5) {
           mer = width;
           position = i;
