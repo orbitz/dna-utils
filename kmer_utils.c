@@ -3,10 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "kmer_total_count.h"
 
 #define ERROR_CODE 5
+#define SPACE_CODE 6
 
 const unsigned char kmer_alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
@@ -94,29 +96,20 @@ char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
   return ret;
 }
 
-// Strip out any character 'c' from char array 's' into a destination dest (you
-// need to allocate that) and copy only len characters.
-static char *strnstrip(const char *s, char *dest, int c, unsigned long long len) {
-  unsigned long long i = 0;
-  unsigned long long j = 0;
-
-  for(i = 0; i < len; i++) {
-    if(s[i] != c) {
-      dest[j] = s[i];
-      j++;
-    }
-  }
-
-  dest[j] = '\0';
-
-  return dest;
-}
-
 static void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
   size_t i;
   for(i = 0; i < len; ++i) {
-    str[i] = lookup[(int)str[i]];
+    if(isspace(str[i])) {
+      str[i] = SPACE_CODE;
+    }
+    else {
+      str[i] = lookup[(int)str[i]];
+    }
   }
+}
+
+static int is_whitespace(char c) {
+  return c == SPACE_CODE;
 }
 
 static int is_error_char(char c) {
@@ -130,6 +123,10 @@ static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_
 
   // for each char in the k-mer check if it is an error char
   for(i = *pos; i < *pos + kmer_len; ++i) {
+    if(is_whitespace(str[i])) {
+      continue;
+    }
+
     if(is_error_char(str[i])) {
       mer = error_mer;
       *pos = i;
@@ -147,6 +144,7 @@ static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_
 
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char *line = NULL;
+  char *seq = NULL;
   size_t len = 0;
   ssize_t read;
 
@@ -163,14 +161,6 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     exit(EXIT_FAILURE);
   }
 
-  char *str = malloc(4096);
-  if(str == NULL) {
-    fprintf(stderr, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-
-  unsigned long long str_size = 4096;
-
   while ((read = getdelim(&line, &len, '>', fh)) != -1) {
 
     // find our first \n, this should be the end of the header
@@ -179,36 +169,22 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
       continue;
 
     // point to one past that.
-    start = start + 1;
+    seq = start + 1;
 
-    size_t start_len = strlen(start);
-
-    // if our current str buffer isn't big enough, realloc
-    if(start_len + 1 > str_size + 1) {
-      str = realloc(str, start_len + 1);
-      if(str == NULL) {
-        fprintf(stderr, strerror(errno));
-        exit(EXIT_FAILURE);
-      }
-    }
-
-    // strip out all other newlines to handle multiline sequences
-    str = strnstrip(start, str, '\n',start_len);
-    size_t seq_length = strlen(str);
+    size_t seq_length = read - (seq - line);
 
     // relace A, C, G and T with 0, 1, 2, 3 respectively
     // everything else is 5
-    translate_nucleotides_to_numbers(str, seq_length, kmer_alpha);
+    translate_nucleotides_to_numbers(seq, seq_length, kmer_alpha);
 
     // loop through our string to process each k-mer
     for(position = 0; position < (seq_length - kmer + 1); position++) {
-      size_t mer = calculate_mer(str, &position, kmer, width);
+      size_t mer = calculate_mer(seq, &position, kmer, width);
       counts[mer]++;
     }
   }
 
   free(line);
-  free(str);
 
   return counts;
 }
