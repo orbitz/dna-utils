@@ -6,6 +6,8 @@
 
 #include "kmer_total_count.h"
 
+#define ERROR_CODE 5
+
 const unsigned char kmer_alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
@@ -110,6 +112,17 @@ static char *strnstrip(const char *s, char *dest, int c, unsigned long long len)
   return dest;
 }
 
+void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
+  size_t i;
+  for(i = 0; i < len; ++i) {
+    str[i] = lookup[(int)str[i]];
+  }
+}
+
+int is_error_char(char c) {
+  return c == ERROR_CODE;
+}
+
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char *line = NULL;
   size_t len = 0;
@@ -149,7 +162,6 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
 
     size_t start_len = strlen(start);
 
-
     // if our current str buffer isn't big enough, realloc
     if(start_len + 1 > str_size + 1) {
       str = realloc(str, start_len + 1);
@@ -159,16 +171,13 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
       }
     }
 
-
     // strip out all other newlines to handle multiline sequences
     str = strnstrip(start, str, '\n',start_len);
     size_t seq_length = strlen(str);
 
     // relace A, C, G and T with 0, 1, 2, 3 respectively
     // everything else is 5
-    for(i = 0; i < seq_length; i++) {
-      str[i] = kmer_alpha[(int)str[i]];
-    }
+    translate_nucleotides_to_numbers(str, seq_length, kmer_alpha);
 
     // loop through our string to process each k-mer
     for(position = 0; position < (seq_length - kmer + 1); position++) {
@@ -177,7 +186,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
 
       // for each char in the k-mer check if it is an error char
       for(i = position; i < position + kmer; ++i) {
-        if(str[i] == 5) {
+        if(is_error_char(str[i])) {
           mer = width;
           position = i;
           goto next;
