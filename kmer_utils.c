@@ -197,7 +197,6 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
 
   free(line);
   free(str);
-  fclose(fh);
 
   return counts;
 }
