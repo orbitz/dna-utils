@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #include "kmer_total_count.h"
 
@@ -16,7 +17,7 @@ const unsigned char kmer_alpha[256] =
 {5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 
- //                                     A     C           G
+ //                            >        A     C           G
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2, 5, 5, 5, 5, 5, 5,
 
  //                T                                      A     C           G
@@ -80,11 +81,24 @@ char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
 }
 
 // convert a string into values from a lookup array
-static void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
+static bool translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup, bool *header) {
   size_t i;
 
-  for(i = 0; i < len; ++i)
-    str[i] = lookup[(int)str[i]];
+	for(i = 0; i < len; ++i) {
+		if(str[i] == '>')
+			*header = true;
+
+		if(*header) {
+			if(str[i] == '\n')
+				*header = false;
+
+			str[i] = ERROR;
+		} 
+		else 
+			str[i] = lookup[(int)str[i]];
+	}
+
+	return *header;
 }
 
 static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t kmer_len, size_t error_mer) {
@@ -123,15 +137,12 @@ static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t
 }
 
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
-  char *line = NULL;
-  char *seq = NULL;
+  char buffer[BUFSIZ];
+  bool header = false;
+
   size_t len = 0;
-  ssize_t read;
+  size_t position;
 
-  size_t position = 0;
-
-  // width is 4^kmer
-  // there's a sneaky bitshift to avoid pow dependency
   const unsigned long width = kmer_pow_four(kmer);
 
   // malloc our return array
@@ -141,30 +152,19 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     exit(EXIT_FAILURE);
   }
 
-  while ((read = getdelim(&line, &len, '>', fh)) != -1) {
+  while((len = fread(&buffer, 1, 4096, fh)) != NULL) {
+    size_t i = 0;
 
-    // find our first \n, this should be the end of the header
-    char *start = strchr(line, '\n');
-    if(start == NULL)
-      continue;
+		// returns header state, 
+ 		header = translate_nucleotides_to_numbers(buffer, len, kmer_alpha, &header);
 
-    // point to one past that.
-    seq = start + 1;
 
-    size_t seq_length = read - (seq - line);
-
-    // relace A, C, G and T with 0, 1, 2, 3 respectively
-    // unknowns are 5, newlines are 6
-    translate_nucleotides_to_numbers(seq, seq_length, kmer_alpha);
-
-    // loop through our string to process each k-mer
-    for(position = 0; position < (seq_length - kmer + 1); position++) {
-      size_t mer = calculate_mer(seq, seq_length, &position, kmer, width);
+    for(i = 0; i < (len - kmer + 1); i++) {
+      size_t mer = calculate_mer(buffer, len, &i, kmer, width);
       counts[mer]++;
     }
   }
 
-  free(line);
 
   return counts;
 }
