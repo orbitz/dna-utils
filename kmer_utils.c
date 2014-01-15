@@ -89,15 +89,20 @@ static void translate_nucleotides_to_numbers(char *str, size_t len, const unsign
 
 static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_t error_mer) {
   size_t mer = 0;
-  size_t multiply = 1;
+  size_t multiply;
   size_t i;
+  size_t end;
 
-  // for each char in the k-mer check if it is an error char
+  // set our multiplier to be pow(4, mer) >> 2;
   multiply = (unsigned long long)1 << (kmer_len* 2);
   multiply = multiply >> 2;
-  for(i = *pos; i < *pos + kmer_len; ++i) {
+
+  // for each char in the k-mer check if it is an error char
+  end = *pos + kmer_len;
+  for(i = *pos; i < end; ++i) {
     if(str[i] == SPACE) {
-        continue;
+      end++;
+      continue;
     }
     if(str[i] == ERROR) {
       *pos = i;
