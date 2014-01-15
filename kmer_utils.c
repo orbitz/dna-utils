@@ -7,11 +7,13 @@
 
 #include "kmer_total_count.h"
 
-#define ERROR_CODE 5
-#define SPACE_CODE 6
+#define ERROR 5
+#define SPACE 6
 
 const unsigned char kmer_alpha[256] =
-{5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+
+//                             \n
+{5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 
  //                                     A     C           G
@@ -34,35 +36,16 @@ unsigned long long kmer_pow_four(unsigned long long x) {
   return (unsigned long long)1 << (x * 2);
 }
 
-// convert a string of k-mer size base-4 values  into a
-// base-10 index
-unsigned long kmer_num_to_index(const char *str, const int kmer, const long error_pos) {
-  int i = 0;
-  unsigned long out = 0;
-  unsigned long multiply = 1;
-
-  for(i = kmer - 1; i >= 0; i--){
-
-    if(str[i] >> 2) {
-      return error_pos;
-    }
-
-    out += str[i] * multiply;
-    multiply = multiply << 2;
-  }
-
-  return out;
-}
-
 // convert an index back into a kmer string
 char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
+
   int i = 0;
   int j = 0;
   char *num_array = calloc(kmer,  sizeof(char));
   char *ret = calloc(kmer + 1, sizeof(char));
+
   if(ret == NULL)
     exit(EXIT_FAILURE);
-
 
   // this is the core of the conversion. modulus 4 for base 4 conversion
   while (index != 0) {
@@ -96,24 +79,12 @@ char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
   return ret;
 }
 
+// convert a string into values from a lookup array
 static void translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
   size_t i;
-  for(i = 0; i < len; ++i) {
-    if(isspace(str[i])) {
-      str[i] = SPACE_CODE;
-    }
-    else {
-      str[i] = lookup[(int)str[i]];
-    }
-  }
-}
 
-static int is_whitespace(char c) {
-  return c == SPACE_CODE;
-}
-
-static int is_error_char(char c) {
-  return c == ERROR_CODE;
+  for(i = 0; i < len; ++i)
+    str[i] = lookup[(int)str[i]];
 }
 
 static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_t error_mer) {
@@ -122,21 +93,21 @@ static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_
   size_t i;
 
   // for each char in the k-mer check if it is an error char
+  multiply = (unsigned long long)1 << (kmer_len* 2);
+  multiply = multiply >> 2;
   for(i = *pos; i < *pos + kmer_len; ++i) {
-    if(is_whitespace(str[i])) {
-      continue;
+    if(str[i] == SPACE) {
+        continue;
     }
-
-    if(is_error_char(str[i])) {
-      mer = error_mer;
+    if(str[i] == ERROR) {
       *pos = i;
-      return mer;
+      return error_mer;
     }
 
     // multiply this char in the mer by the multiply
     // and bitshift the multiply for the next round
     mer += str[i] * multiply;
-    multiply = multiply << 2;
+    multiply = multiply >> 2;
   }
 
   return mer;
@@ -174,7 +145,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     size_t seq_length = read - (seq - line);
 
     // relace A, C, G and T with 0, 1, 2, 3 respectively
-    // everything else is 5
+    // unknowns are 5, newlines are 6
     translate_nucleotides_to_numbers(seq, seq_length, kmer_alpha);
 
     // loop through our string to process each k-mer
