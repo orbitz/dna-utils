@@ -33,7 +33,7 @@ const unsigned char kmer_alpha[256] =
 static const char reverse_alpha[4] = { 'A', 'C', 'G', 'T' };
 
 unsigned long long kmer_pow_four(unsigned long long x) {
-  return (unsigned long long)1 << (x * 2);
+  return 1ULL << (x * 2);
 }
 
 // convert an index back into a kmer string
@@ -87,20 +87,25 @@ static void translate_nucleotides_to_numbers(char *str, size_t len, const unsign
     str[i] = lookup[(int)str[i]];
 }
 
-static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_t error_mer) {
+static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t kmer_len, size_t error_mer) {
   size_t mer = 0;
   size_t multiply;
   size_t i;
   size_t end;
 
   // set our multiplier to be pow(4, mer) >> 2;
-  multiply = (unsigned long long)1 << (kmer_len* 2);
-  multiply = multiply >> 2;
+  multiply = kmer_pow_four(kmer_len) >> 2;
 
-  // for each char in the k-mer check if it is an error char
   end = *pos + kmer_len;
+
+  // check if space or error, otherwise bump our multiplier and mer 
   for(i = *pos; i < end; ++i) {
     if(str[i] == SPACE) {
+      // if our end has been expanded to the max string length
+      // or if it is the first loop return the error length
+      if(end == str_len || i == *pos) 
+        return error_mer;
+
       end++;
       continue;
     }
@@ -114,7 +119,6 @@ static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_
     mer += str[i] * multiply;
     multiply = multiply >> 2;
   }
-
   return mer;
 }
 
@@ -155,7 +159,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
 
     // loop through our string to process each k-mer
     for(position = 0; position < (seq_length - kmer + 1); position++) {
-      size_t mer = calculate_mer(seq, &position, kmer, width);
+      size_t mer = calculate_mer(seq, seq_length, &position, kmer, width);
       counts[mer]++;
     }
   }
