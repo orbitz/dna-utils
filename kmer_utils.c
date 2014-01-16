@@ -136,9 +136,29 @@ static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t
   return mer;
 }
 
+static size_t fread_save_n_bytes(char *buffer, FILE *fh, size_t save_size, size_t buffer_size, size_t len) {
+
+  if(ftell(fh) == 0)  {
+    fread(buffer, 1, buffer_size, fh);
+    len = buffer_size - save_size;
+  }
+  else {
+
+    size_t read_size = buffer_size - save_size;
+
+    memcpy(buffer, buffer + len, save_size);
+
+    len = fread(buffer + save_size, 1, read_size, fh);
+
+  }
+
+  return len;
+}
+
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
-  char buffer[BUFSIZ];
+  char buffer[BUFSIZ] = { 0 };
   bool header = false;
+  bool started = false;
 
   size_t len = 0;
   size_t position;
@@ -152,19 +172,22 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     exit(EXIT_FAILURE);
   }
 
-  while((len = fread(&buffer, 1, 4096, fh)) != NULL) {
-    size_t i = 0;
-
-    // returns header state, 
-    header = translate_nucleotides_to_numbers(buffer, len, kmer_alpha, &header);
-
+  while((len = fread_save_n_bytes(buffer, fh, kmer, BUFSIZ - 1, len)) != NULL) {
+    size_t i;
+    
+    char *ptr = buffer;
+    if(started)
+      ptr = buffer + kmer;
+      
+    header = translate_nucleotides_to_numbers(ptr, len, kmer_alpha, &header);
 
     for(i = 0; i < (len - kmer + 1); i++) {
       size_t mer = calculate_mer(buffer, len, &i, kmer, width);
       counts[mer]++;
     }
-  }
 
+    started = true;
+  }
 
   return counts;
 }
