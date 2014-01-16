@@ -81,24 +81,26 @@ char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
 }
 
 // convert a string into values from a lookup array
-static bool translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup, bool *header) {
+bool translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup, bool start_header) {
+
+  bool header = start_header;
   size_t i;
 
   for(i = 0; i < len; ++i) {
-    if(str[i] == '>')
-      *header = true;
-
-    if(*header) {
-      if(str[i] == '\n')
-        *header = false;
-
+    if(str[i] == '>') {
+      header = true;
+    } 
+    if(header) {
+      if(str[i] == '\n') {
+        header = false;
+      }
       str[i] = ERROR;
     } 
     else 
       str[i] = lookup[(int)str[i]];
   }
 
-  return *header;
+  return header;
 }
 
 static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t kmer_len, size_t error_mer) {
