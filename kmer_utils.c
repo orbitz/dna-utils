@@ -181,7 +181,7 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     if(started)
       ptr = buffer + kmer;
       
-    header = translate_nucleotides_to_numbers(ptr, len, kmer_alpha, &header);
+    header = translate_nucleotides_to_numbers(ptr, len, kmer_alpha, header);
 
     for(i = 0; i < (len - kmer + 1); i++) {
       size_t mer = calculate_mer(buffer, len, &i, kmer, width);
