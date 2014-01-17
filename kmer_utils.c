@@ -11,6 +11,7 @@
 #define ERROR 5
 #define SPACE 6
 
+#define BUFSIZ 256
 const unsigned char kmer_alpha[256] =
 
 //                             \n
@@ -174,14 +175,18 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     exit(EXIT_FAILURE);
   }
 
-  while((len = fread_save_n_bytes(buffer, fh, kmer, BUFSIZ - 1, len)) != NULL) {
+	size_t save_size = kmer - 1;
+  while((len = fread_save_n_bytes(buffer, fh, save_size, BUFSIZ - 1, len)) != NULL) {
     size_t i;
-    
-    char *ptr = buffer;
-    if(started)
-      ptr = buffer + kmer;
+		char *ptr = buffer + save_size;
+		size_t ptr_len = len;
+
+		if(!started) {
+			ptr_len = len + save_size; 
+			ptr = buffer;
+		}
       
-    header = translate_nucleotides_to_numbers(ptr, len, kmer_alpha, header);
+    header = translate_nucleotides_to_numbers(ptr, ptr_len, kmer_alpha, header);
 
     for(i = 0; i < (len - kmer + 1); i++) {
       size_t mer = calculate_mer(buffer, len, &i, kmer, width);
