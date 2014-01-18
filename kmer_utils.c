@@ -11,7 +11,7 @@
 #define ERROR 5
 #define SPACE 6
 
-#define BUFSIZ 256
+#define BUFFER_SIZE 256
 const unsigned char kmer_alpha[256] =
 
 //                             \n
@@ -159,12 +159,11 @@ static size_t fread_save_n_bytes(char *buffer, FILE *fh, size_t save_size, size_
 }
 
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
-  char buffer[BUFSIZ] = { 0 };
+  char buffer[BUFFER_SIZE] = { 0 };
   bool header = false;
   bool started = false;
 
   size_t len = 0;
-  size_t position;
 
   const unsigned long width = kmer_pow_four(kmer);
 
@@ -175,17 +174,17 @@ unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
     exit(EXIT_FAILURE);
   }
 
-	size_t save_size = kmer - 1;
-  while((len = fread_save_n_bytes(buffer, fh, save_size, BUFSIZ - 1, len)) != NULL) {
+  size_t save_size = kmer - 1;
+  while((len = fread_save_n_bytes(buffer, fh, save_size, BUFFER_SIZE - 1, len)) != 0) {
     size_t i;
-		char *ptr = buffer + save_size;
-		size_t ptr_len = len;
+    char *ptr = buffer + save_size;
+    size_t ptr_len = len;
 
-		if(!started) {
-			ptr_len = len + save_size; 
-			ptr = buffer;
-		}
-      
+    if(!started) {
+      ptr_len = len + save_size;
+      ptr = buffer;
+    }
+
     header = translate_nucleotides_to_numbers(ptr, ptr_len, kmer_alpha, header);
 
     for(i = 0; i < (len - kmer + 1); i++) {
