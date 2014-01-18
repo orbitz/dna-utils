@@ -8,8 +8,8 @@
 
 #include "kmer_total_count.h"
 
-#define ERROR 5
-#define SPACE 6
+#define ERROR_CODE 5
+#define SPACE_CODE 6
 
 #define BUFFER_SIZE 256
 const unsigned char kmer_alpha[256] =
@@ -82,77 +82,67 @@ char *kmer_index_to_kmer(unsigned long long index, long kmer)  {
 }
 
 // convert a string into values from a lookup array
-bool translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup, bool start_header) {
-
-  bool header = start_header;
-  size_t i;
+size_t translate_nucleotides_to_numbers(char *str, size_t len, const unsigned char *lookup) {
+  size_t i = 0;
 
   for(i = 0; i < len; ++i) {
     if(str[i] == '>') {
-      header = true;
-    } 
-    if(header) {
-      if(str[i] == '\n') {
-        header = false;
-      }
-      str[i] = ERROR;
-    } 
-    else 
+      return i;
+    }
+    else {
       str[i] = lookup[(int)str[i]];
+    }
   }
 
-  return header;
+  return i;
 }
 
-static size_t calculate_mer(const char *str, size_t str_len, size_t *pos, size_t kmer_len, size_t error_mer) {
+static int is_whitespace(char c) {
+  return c == SPACE_CODE;
+}
+
+static int is_error_char(char c) {
+  return c == ERROR_CODE;
+}
+
+static size_t calculate_mer(const char *str, size_t *pos, size_t kmer_len, size_t error_mer) {
   size_t mer = 0;
-  size_t multiply;
+  size_t multiply = 1;
   size_t i;
-  size_t end;
 
-  // set our multiplier to be pow(4, mer) >> 2;
-  multiply = kmer_pow_four(kmer_len) >> 2;
-
-  end = *pos + kmer_len;
-
-  // check if space or error, otherwise bump our multiplier and mer 
-  for(i = *pos; i < end; ++i) {
-    if(str[i] == SPACE) {
-      // if our end has been expanded to the max string length
-      // or if it is the first loop return the error length
-      if(end == str_len || i == *pos) 
-        return error_mer;
-
-      end++;
+  /* printf("-----\n"); */
+  // for each char in the k-mer check if it is an error char
+  for(i = *pos; i < *pos + kmer_len; ++i) {
+    if(is_whitespace(str[i])) {
       continue;
     }
-    if(str[i] == ERROR) {
+
+    if(is_error_char(str[i])) {
+      mer = error_mer;
       *pos = i;
-      return error_mer;
+      return mer;
     }
 
     // multiply this char in the mer by the multiply
     // and bitshift the multiply for the next round
+    /* printf("str[i] = %d\n", str[i]); */
+    /* printf("i = %zu\n", i); */
     mer += str[i] * multiply;
-    multiply = multiply >> 2;
+    multiply = multiply << 2;
+    /* printf("mer - %zu\n", mer); */
   }
+
   return mer;
 }
 
-static size_t fread_save_n_bytes(char *buffer, FILE *fh, size_t save_size, size_t buffer_size, size_t len) {
+size_t consume_header(const char *str, size_t len) {
+  size_t i;
 
-  if(ftell(fh) == 0)  {
-    fread(buffer, 1, buffer_size, fh);
-    len = buffer_size - save_size;
-  }
-  else {
-
-    size_t read_size = buffer_size - save_size;
-
-    memcpy(buffer, buffer + len, save_size);
-
-    len = fread(buffer + save_size, 1, read_size, fh);
-
+  for(i = 0; i < len; ++i) {
+    if(str[i] == '\n') {
+      ++i;
+      return i;
+    }
   }
 
   return len;
@@ -160,39 +150,55 @@ static size_t fread_save_n_bytes(char *buffer, FILE *fh, size_t save_size, size_
 
 unsigned long long *kmer_counts_from_file(FILE *fh, const unsigned int kmer) {
   char buffer[BUFFER_SIZE] = { 0 };
-  bool header = false;
-  bool started = false;
+  char *start = buffer;
+  size_t read_len = BUFFER_SIZE;
+  bool in_header = false;
 
   size_t len = 0;
 
   const unsigned long width = kmer_pow_four(kmer);
 
-  // malloc our return array
+  // calloc our return array
   unsigned long long *counts = calloc(width + 1, sizeof *counts);
+
   if(counts == NULL)  {
     fprintf(stderr, strerror(errno));
     exit(EXIT_FAILURE);
   }
 
-  size_t save_size = kmer - 1;
-  while((len = fread_save_n_bytes(buffer, fh, save_size, BUFFER_SIZE - 1, len)) != 0) {
-    size_t i;
-    char *ptr = buffer + save_size;
-    size_t ptr_len = len;
+  while((len = fread(start, 1, read_len, fh)) != 0) {
+    size_t total_len = (start + len) - buffer;
+    size_t processed = 0;
 
-    if(!started) {
-      ptr_len = len + save_size;
-      ptr = buffer;
+    printf("total_len = %zu\n", total_len);
+    while(processed != total_len) {
+      printf("processed = %zu\n", processed);
+      if(in_header) {
+        processed += consume_header(buffer + processed, total_len - processed);
+        in_header = (processed == total_len);
+      }
+
+      in_header = in_header || buffer[processed] == '>';
+
+      if(!in_header) {
+        size_t i;
+        size_t to_process = processed;
+
+        to_process += translate_nucleotides_to_numbers(buffer + processed, total_len, kmer_alpha);
+
+        for(i = processed; i < (to_process - kmer + 1); ++i) {
+          size_t mer = calculate_mer(buffer, &i, kmer, width);
+          counts[mer]++;
+        }
+
+        processed = to_process;
+        in_header = (buffer[processed] == '>');
+      }
     }
 
-    header = translate_nucleotides_to_numbers(ptr, ptr_len, kmer_alpha, header);
-
-    for(i = 0; i < (len - kmer + 1); i++) {
-      size_t mer = calculate_mer(buffer, len, &i, kmer, width);
-      counts[mer]++;
-    }
-
-    started = true;
+    memcpy(buffer, buffer + processed, processed);
+    start = buffer + (BUFFER_SIZE - processed);
+    read_len = BUFFER_SIZE - (start - buffer);
   }
 
   return counts;
